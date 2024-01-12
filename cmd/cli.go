@@ -37,6 +37,13 @@ func main() {
 		log.Fatalf("Error decoding configuration: %v\n", err)
 	}
 
+	// Check for mandatory flags
+	if *proxyUsername == "" || *proxyPassword == "" {
+		fmt.Println("Error: proxy_username and proxy_password are required.")
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	// Override config with flags if provided
 	if *proxyUsername != "" {
 		config.ProxyUsername = *proxyUsername
