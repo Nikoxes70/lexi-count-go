@@ -84,8 +84,5 @@ func fetchURLs(url string) ([]string, error) {
 		return nil, fmt.Errorf("error reading file: %v", err)
 	}
 
-	lines = []string{"https://www.engadget.com/2019/08/24/crime-allegation-in-space/"}
-	//lines = lines[:1000]
-
 	return lines, nil
 }
