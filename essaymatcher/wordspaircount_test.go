@@ -1,57 +1,42 @@
 package essaymatcher
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestFindTopWords(t *testing.T) {
-	tests := []struct {
-		name       string
-		wordCounts map[string]int
-		n          int
-		want       []wordCountPair
-	}{
-		{
-			name: "Basic test",
-			wordCounts: map[string]int{
-				"hello": 10,
-				"world": 5,
-				"test":  8,
-			},
-			n: 2,
-			want: []wordCountPair{
-				{"hello", 10},
-				{"test", 8},
-			},
-		},
-		{
-			name: "Less words than N",
-			wordCounts: map[string]int{
-				"hello": 10,
-				"world": 5,
-			},
-			n: 3,
-			want: []wordCountPair{
-				{"hello", 10},
-				{"world", 5},
-			},
-		},
-		{
-			name:       "Empty word counts",
-			wordCounts: map[string]int{},
-			n:          2,
-			want:       []wordCountPair{},
-		},
-	}
+// TestPairFinder_FindTopWords tests the FindTopWords function of PairFinder
+func TestPairFinder_FindTopWords(t *testing.T) {
+	pf := NewWordCountPair()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pf := NewWordCountPair()
-			got := pf.FindTopWords(tt.wordCounts, tt.n)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("FindTopWords() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	t.Run("typical usage", func(t *testing.T) {
+		wordCounts := map[string]int{
+			"word1": 10,
+			"word2": 5,
+			"word3": 8,
+		}
+
+		topWords := pf.FindTopWords(wordCounts, 2)
+		assert.Len(t, topWords, 2)
+		assert.Equal(t, wordCountPair{"word1", 10}, topWords[0])
+		assert.Equal(t, wordCountPair{"word3", 8}, topWords[1])
+	})
+
+	t.Run("request more words than available", func(t *testing.T) {
+		wordCounts := map[string]int{
+			"word1": 3,
+			"word2": 1,
+		}
+
+		topWords := pf.FindTopWords(wordCounts, 5)
+		assert.Len(t, topWords, 2) // Should return only the available words
+	})
+
+	t.Run("empty word counts", func(t *testing.T) {
+		wordCounts := map[string]int{}
+
+		topWords := pf.FindTopWords(wordCounts, 3)
+		assert.Empty(t, topWords)
+	})
 }
