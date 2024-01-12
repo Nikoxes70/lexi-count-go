@@ -1,13 +1,15 @@
 package main
 
 import (
-	"LexiCount/essaymatcher"
-	"LexiCount/randomproxyclient"
-	"LexiCount/wordsbank"
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+
+	"LexiCount/essaymatcher"
+	"LexiCount/randomproxyclient"
+	"LexiCount/wordsbank"
 )
 
 type Config struct {
@@ -52,6 +54,9 @@ func main() {
 
 	fetcher := essaymatcher.NewFetcher(config.Threads, config.TopNWords, em, wcp)
 	r, err := fetcher.Start(config.EssaysURL)
+	if err != nil {
+		log.Fatal(err)
+	}
 	println(r)
 }
 

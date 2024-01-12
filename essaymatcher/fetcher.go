@@ -35,8 +35,8 @@ func (f *Fetcher) Start(essaysUrl string) (string, error) {
 
 	var wg sync.WaitGroup
 	wordCounts := make(map[string]int)
+	errs := make([]error, 0)
 	mu := &sync.Mutex{}
-
 	semaphore := make(chan struct{}, f.concurrencyLimit)
 
 	for _, url := range urls {
@@ -45,9 +45,8 @@ func (f *Fetcher) Start(essaysUrl string) (string, error) {
 			defer wg.Done()
 
 			semaphore <- struct{}{}
-			err = f.matcher.ProcessEssay(url, wordCounts, mu)
-			if err != nil {
-				fmt.Printf("🔴Error processEssay: %v \n", err)
+			if err = f.matcher.ProcessEssay(url, wordCounts, mu); err != nil {
+				errs = append(errs, err)
 			}
 			<-semaphore
 		}(url)
@@ -55,9 +54,17 @@ func (f *Fetcher) Start(essaysUrl string) (string, error) {
 	wg.Wait()
 
 	topWords := f.wcp.FindTopWords(wordCounts, f.topNWords)
-	jsonOutput, err := json.MarshalIndent(topWords, "", "  ")
+	response := struct {
+		Succeed []wordCountPair `json:"Succeed"`
+		Failed  []error         `json:"Failed"`
+	}{
+		Succeed: topWords,
+		Failed:  errs,
+	}
+
+	jsonOutput, err := json.Marshal(response)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	return string(jsonOutput), nil
 }

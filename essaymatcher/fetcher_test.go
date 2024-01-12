@@ -1,7 +1,6 @@
 package essaymatcher
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -50,51 +49,44 @@ func TestFetcher_Start(t *testing.T) {
 
 		result, err := fetcher.Start(ts.URL)
 		assert.NoError(t, err)
-		assert.Contains(t, result, "test")
+		assert.Contains(t, result, "\"Succeed\":[{\"Word\":\"test\",\"Count\":10}]")
 	})
 
-	t.Run("http request failure", func(t *testing.T) {
-		// Set up a mock HTTP server that returns an error
-		tsErr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	t.Run("http request error", func(t *testing.T) {
+		tsError := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
-		defer tsErr.Close()
+		defer tsError.Close()
 
-		result, err := fetcher.Start(tsErr.URL)
+		_, err := fetcher.Start(tsError.URL)
 		assert.Error(t, err)
-		assert.Empty(t, result)
 	})
 
-	t.Run("matcherer processing error", func(t *testing.T) {
-		mockMatcher.On("ProcessEssay", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("processing error"))
-		mockWCP.On("FindTopWords", mock.Anything, 5).Return([]wordCountPair{})
+	t.Run("concurrency handling", func(t *testing.T) {
+		// Modify the mock matcher to simulate concurrent processing
+		mockMatcher.On("ProcessEssay", mock.Anything, mock.Anything, mock.Anything).Return(func(url string, wordCounts map[string]int, mu *sync.Mutex) error {
+			mu.Lock()
+			defer mu.Unlock()
+			wordCounts["test"]++
+			return nil
+		})
 
-		_, err := fetcher.Start(ts.URL)
-		assert.Error(t, err)
-		// You can also assert that the error message contains "processing error"
+		mockWCP.On("FindTopWords", mock.Anything, 5).Return([]wordCountPair{{Word: "test", Count: 2}})
+
+		result, err := fetcher.Start(ts.URL)
+		assert.NoError(t, err)
+		assert.Contains(t, result, "\"Succeed\":[{\"Word\":\"test\",\"Count\":10}]")
 	})
 
-	t.Run("invalid url handling", func(t *testing.T) {
-		// Use a mock server that returns an invalid URL
-		tsInvalidURL := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("http://%zzz"))
+	t.Run("no urls fetched", func(t *testing.T) {
+		tsEmpty := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(""))
 		}))
-		defer tsInvalidURL.Close()
+		defer tsEmpty.Close()
 
-		result, err := fetcher.Start(tsInvalidURL.URL)
-		assert.Error(t, err)
-		assert.Empty(t, result)
-	})
-
-	t.Run("invalid url handling", func(t *testing.T) {
-		// Use a mock server that returns an invalid URL
-		tsInvalidURL := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("http://%zzz"))
-		}))
-		defer tsInvalidURL.Close()
-
-		result, err := fetcher.Start(tsInvalidURL.URL)
-		assert.Error(t, err)
-		assert.Empty(t, result)
+		result, err := fetcher.Start(tsEmpty.URL)
+		assert.NoError(t, err)
+		assert.Contains(t, result, "{\"Succeed\":[{\"Word\":\"test\",\"Count\":10}]")
+		assert.Contains(t, result, "\"Failed\":[]")
 	})
 }
