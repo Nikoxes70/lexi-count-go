@@ -44,10 +44,55 @@ func TestScraper_Scrap(t *testing.T) {
 		assert.Contains(t, result, "p test 2")
 		assert.Contains(t, result, "p test 3")
 		assert.Contains(t, result, "p test 4")
-		// Additional assertions as needed
 	})
 
-	// Add more test cases here for different scenarios like error handling, retry logic, etc.
-}
+	t.Run("http request error", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer ts.Close()
 
-// Additional helper functions for setting up mocks and expected responses can be written here.
+		mockClient.On("NewHTTPClientWithRandomProxy").Return(&http.Client{}, nil)
+
+		_, err := scraper.Scrap(ts.URL, 1)
+		assert.Error(t, err)
+	})
+
+	t.Run("retry logic", func(t *testing.T) {
+		var attempts int
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			attempts++
+			if attempts < 3 {
+				w.WriteHeader(http.StatusInternalServerError)
+			} else {
+				w.Write([]byte(`<html><head><title>Retry Title</title></head><body><p>Retry Paragraph</p></body></html>`))
+			}
+		}))
+		defer ts.Close()
+
+		mockClient.On("NewHTTPClientWithRandomProxy").Return(&http.Client{}, nil)
+
+		_, err := scraper.Scrap(ts.URL, 1)
+		assert.NoError(t, err)
+		assert.Equal(t, 3, attempts)
+	})
+
+	t.Run("max retry attempts exceeded", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer ts.Close()
+
+		mockClient.On("NewHTTPClientWithRandomProxy").Return(&http.Client{}, nil)
+
+		_, err := scraper.Scrap(ts.URL, 1)
+		assert.Error(t, err)
+		// You can also assert the specific error message if your implementation provides one.
+	})
+
+	t.Run("empty url", func(t *testing.T) {
+		_, err := scraper.Scrap("", 1)
+		assert.Error(t, err)
+		assert.Equal(t, "htmlDocument - url must not be empty", err.Error())
+	})
+}
