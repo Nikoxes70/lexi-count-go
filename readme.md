@@ -3,7 +3,7 @@
 LexiCount is a command-line tool designed for processing and analyzing essays. It leverages proxies for network requests and analyzes text content to identify top words used in a collection of essays.
 
 ## Dependencies
-### Webshare.io 
+### [Webshare.io](webshare.io) 
 LexiCount requires an active and registered user account from Webshare.io to function correctly. The tool utilizes multiple proxies provided by Webshare.io to scrape a vast list of essay URLs concurrently. This approach helps in efficient data retrieval and minimizes the chances of being rate-limited or blocked by target websites.
 
 Ensure that you have a registered account with Webshare.io and access to a list of proxy servers. Your proxy credentials (username and password) and the proxy list should be included in the tool's configuration as per the instructions below.
@@ -32,6 +32,14 @@ Optional flags can override other settings:
 ./LexiCount --proxy_username="username" --proxy_password="password" --threads=10 --top_n_words=20
 ```
 
+#### Flags
 
-
-
+| Name           | Type   | Description                  |
+|----------------|--------|------------------------------|
+| proxy_username | string | webshare Proxy Username      |
+| proxy_password | string | webshare proxy service       |
+| proxy_api_key  | string | webshare Proxy Api Key       |
+| words_bank     | string | URL of the Words Bank        |
+| essays_url     | stirng | URL of the Essays            |
+| threads        | int    | Number of threads            |
+| top_n_words    | int    | Number of top words to fetch |

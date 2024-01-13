@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	titleElement    = "h1"
-	ogTitle         = "meta[property='og:headline']"
-	contentAttr     = "content"
-	contentBodyAttr = ".caas-body-content p"
+	titleElement     = "h1"
+	ogTitle          = "meta[property='og:headline']"
+	contentAttr      = "content"
+	contentBodyAttr  = ".caas-body-content p"
+	maxNumOfAttempts = 10
 )
 
 type randomProxyClient interface {
@@ -30,7 +31,7 @@ func NewScraper(c randomProxyClient) *Scraper {
 }
 
 func (s *Scraper) Scrap(url string, attempt int) (string, error) {
-	doc, err := s.htmlDocument(url, attempt)
+	doc, err := s.htmlDocument(url, attempt, nil)
 	if err != nil {
 		return "", err
 	}
@@ -68,13 +69,13 @@ func (s *Scraper) extractArticle(doc *goquery.Document) string {
 	return strings.Join(paragraphs, "\n")
 }
 
-func (s *Scraper) htmlDocument(url string, attempt int) (*goquery.Document, error) {
+func (s *Scraper) htmlDocument(url string, attempt int, lastError error) (*goquery.Document, error) {
 	if url == "" {
 		return nil, fmt.Errorf("htmlDocument - url must not be empty")
 	}
 
-	if attempt >= 10 {
-		return nil, fmt.Errorf("htmlDocument - maximum retry attempts reached")
+	if attempt >= maxNumOfAttempts {
+		return nil, fmt.Errorf("htmlDocument - maximum retry attempts reached with last error: %v", lastError)
 	}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -89,16 +90,14 @@ func (s *Scraper) htmlDocument(url string, attempt int) (*goquery.Document, erro
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("⚠️retrying to htmlDocument with different proxy from %s, attemp = %d, err: %s \n", url, attempt+1, err)
-		return s.htmlDocument(url, attempt+1)
+		return s.htmlDocument(url, attempt+1, err)
 	}
 
 	if resp.StatusCode > 400 {
 		if resp.StatusCode == 404 {
-			return nil, err
+			return nil, fmt.Errorf("page not found - status code: %d", resp.StatusCode)
 		}
-		fmt.Printf("⚠️retrying to htmlDocument with different proxy from %s, attemp = %d, StatusCode: %d \n", url, attempt+1, resp.StatusCode)
-		return s.htmlDocument(url, attempt+1)
+		return s.htmlDocument(url, attempt+1, fmt.Errorf("failed with status code: %d", resp.StatusCode))
 	}
 
 	defer resp.Body.Close()

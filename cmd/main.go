@@ -15,6 +15,7 @@ import (
 type Config struct {
 	ProxyUsername string `json:"proxy_username"`
 	ProxyPassword string `json:"proxy_password"`
+	ProxyApiKey   string `json:"proxy_api_key"`
 	WordsBankURL  string `json:"words_bank"`
 	EssaysURL     string `json:"essays_url"`
 	Threads       int    `json:"threads"`
@@ -40,6 +41,13 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error loading proxies: %v\n", err)
 		return
+	}
+
+	if config.ProxyApiKey != "" {
+		proxyloader := randomproxyclient.NewProxyLoader(config.ProxyApiKey)
+		if downloadedProxies, err := proxyloader.LoadProxies(); err != nil {
+			proxies = downloadedProxies
+		}
 	}
 
 	repo := wordsbank.NewRepo()

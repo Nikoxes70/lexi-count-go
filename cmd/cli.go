@@ -16,6 +16,7 @@ func main() {
 	// Define command line flags
 	proxyUsername := flag.String("proxy_username", "", "Proxy Username")
 	proxyPassword := flag.String("proxy_password", "", "Proxy Password")
+	proxyApiKey := flag.String("proxy_api_key", "", "Proxy Api Key")
 	wordsBankURL := flag.String("words_bank", "", "URL of the Words Bank")
 	essaysURL := flag.String("essays_url", "", "URL of the Essays")
 	threads := flag.Int("threads", 0, "Number of threads")
@@ -51,6 +52,9 @@ func main() {
 	if *proxyPassword != "" {
 		config.ProxyPassword = *proxyPassword
 	}
+	if *proxyApiKey != "" {
+		config.ProxyApiKey = *proxyApiKey
+	}
 	if *wordsBankURL != "" {
 		config.WordsBankURL = *wordsBankURL
 	}
@@ -68,6 +72,11 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error loading proxies: %v\n", err)
 		return
+	}
+
+	proxyloader := randomproxyclient.NewProxyLoader("gc50dhoim7nd5wiz4pntbqcmntg1b28u9bz0d7id")
+	if downloadedProxies, err := proxyloader.LoadProxies(); err != nil {
+		proxies = downloadedProxies
 	}
 
 	repo := wordsbank.NewRepo()

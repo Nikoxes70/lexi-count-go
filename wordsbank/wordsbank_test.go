@@ -73,7 +73,7 @@ func TestWordsBank_IsExists(t *testing.T) {
 
 		wbInvalid := NewWordsBank(mockRepo, tsInvalid.URL, mockValidator)
 
-		assert.False(t, wbInvalid.IsExists("invalid1"), "Invalid word should not be added")
+		assert.False(t, wbInvalid.IsExists(invalidWord), "Invalid word should not be added")
 		assert.True(t, wbInvalid.IsExists("word"), "Valid word should be added")
 	})
 
