@@ -120,6 +120,5 @@ func fetchURLs(url string) ([]string, error) {
 	if err = scanner.Err(); err != nil {
 		return nil, fmt.Errorf("error reading file: %v", err)
 	}
-	lines = lines[:100]
 	return lines, nil
 }
