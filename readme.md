@@ -27,6 +27,12 @@ Run LexiCount with the required flags for proxy_username and proxy_password for 
 ./cli --proxy_username="username" --proxy_password="password"
 ```
 
+Run LexiCount with the prefered flags for proxy_username, proxy_password and apiKey for [WEBSHARE](webshare.io).
+```bash
+./cli --proxy_username="username" --proxy_password="password" --api_key="apiKey"
+```
+
+
 Optional flags can override other settings:
 ```bash
 ./cli --proxy_username="username" --proxy_password="password" --threads=10 --top_n_words=20
