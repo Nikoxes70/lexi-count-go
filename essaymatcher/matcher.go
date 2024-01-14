@@ -3,7 +3,6 @@ package essaymatcher
 import (
 	"regexp"
 	"strings"
-	"sync"
 )
 
 type validatorer interface {
@@ -32,14 +31,13 @@ func NewEssayMatcher(v validatorer, s scrapperer, wb wordsBank) *EssayMatcher {
 	}
 }
 
-func (em *EssayMatcher) ProcessEssay(url string, wordCounts map[string]int, mu *sync.Mutex) error {
+func (em *EssayMatcher) ProcessEssay(url string, wordCounts map[string]int) error {
 	txt, err := em.scrapper.Scrap(url, 1)
 	if err != nil {
 		return err
 	}
 
 	newWords := extractWords(txt)
-	mu.Lock()
 	for _, word := range newWords {
 		if isValid := em.validator.IsValidWord(word); isValid {
 			if isExist := em.wordsBank.IsExists(word); isExist {
@@ -47,7 +45,6 @@ func (em *EssayMatcher) ProcessEssay(url string, wordCounts map[string]int, mu *
 			}
 		}
 	}
-	mu.Unlock()
 
 	return nil
 }

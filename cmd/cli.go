@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,6 +12,16 @@ import (
 	"LexiCount/randomproxyclient"
 	"LexiCount/wordsbank"
 )
+
+type Config struct {
+	ProxyUsername string `json:"proxy_username"`
+	ProxyPassword string `json:"proxy_password"`
+	ProxyApiKey   string `json:"proxy_api_key"`
+	WordsBankURL  string `json:"words_bank"`
+	EssaysURL     string `json:"essays_url"`
+	Threads       int    `json:"threads"`
+	TopNWords     int    `json:"top_n_words"`
+}
 
 func main() {
 	// Define command line flags
@@ -38,13 +49,6 @@ func main() {
 		log.Fatalf("Error decoding configuration: %v\n", err)
 	}
 
-	// Check for mandatory flags
-	if *proxyUsername == "" || *proxyPassword == "" {
-		fmt.Println("Error: proxy_username and proxy_password are required.")
-		flag.Usage()
-		os.Exit(1)
-	}
-
 	// Override config with flags if provided
 	if *proxyUsername != "" {
 		config.ProxyUsername = *proxyUsername
@@ -68,31 +72,54 @@ func main() {
 		config.TopNWords = *topNWords
 	}
 
+	// Check for mandatory flags
+	if config.ProxyUsername == "" || config.ProxyPassword == "" {
+		fmt.Println("Error: proxy_username and proxy_password are required.")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	// Load proxies
 	proxies, err := loadProxies("config/proxies.txt")
 	if err != nil {
 		fmt.Printf("Error loading proxies: %v\n", err)
 		return
 	}
 
-	proxyloader := randomproxyclient.NewProxyLoader("gc50dhoim7nd5wiz4pntbqcmntg1b28u9bz0d7id")
-	if downloadedProxies, err := proxyloader.LoadProxies(); err != nil {
-		proxies = downloadedProxies
-	}
-
 	repo := wordsbank.NewRepo()
 	validator := wordsbank.NewValidator()
 	wb := wordsbank.NewWordsBank(repo, config.WordsBankURL, validator)
+	var pl *randomproxyclient.ProxyDownloader
+	if config.ProxyApiKey != "" {
+		pl = randomproxyclient.NewProxyDownoader(config.ProxyApiKey)
+	}
 
+	client := randomproxyclient.NewRandomProxyClient(proxies, config.ProxyUsername, config.ProxyPassword, pl)
 	wcp := essaymatcher.NewWordCountPair()
-	client := randomproxyclient.NewRandomProxyClient(proxies, config.ProxyUsername, config.ProxyPassword)
 
 	s := essaymatcher.NewScraper(client)
 	em := essaymatcher.NewEssayMatcher(validator, s, wb)
 
 	fetcher := essaymatcher.NewFetcher(config.Threads, config.TopNWords, em, wcp)
+
 	r, err := fetcher.Start(config.EssaysURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 	println(r)
+}
+
+func loadProxies(filePath string) ([]string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var proxies []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		proxies = append(proxies, scanner.Text())
+	}
+	return proxies, scanner.Err()
 }

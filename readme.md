@@ -17,19 +17,19 @@ Before installing LexiCount, ensure you have Go installed on your system. If not
 To install LexiCount, clone the repository and build the binary:
 
 ```bash
-git clone https://github.com/your-repository/LexiCount.git
-cd LexiCount
-go build
+git clone https://github.com/Nikoxes70/lexi-count-go
+cd lexi-count-go 
+go build cmd/cli.go
 ```
 
 Run LexiCount with the required flags for proxy_username and proxy_password for [WEBSHARE](webshare.io).
 ```bash
-./LexiCount --proxy_username="username" --proxy_password="password"
+./cli --proxy_username="username" --proxy_password="password"
 ```
 
 Optional flags can override other settings:
 ```bash
-./LexiCount --proxy_username="username" --proxy_password="password" --threads=10 --top_n_words=20
+./cli --proxy_username="username" --proxy_password="password" --threads=10 --top_n_words=20
 ```
 
 #### Flags

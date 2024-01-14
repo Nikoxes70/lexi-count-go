@@ -4,6 +4,6 @@
   "proxy_api_key": "",
   "words_bank": "https://raw.githubusercontent.com/dwyl/english-words/master/words.txt",
   "essays_url": "https://drive.google.com/uc?export=download&id=1TF4RPuj8iFwpa-lyhxG67V8NDlktmTGi",
-  "threads": 10,
+  "threads": 100,
   "top_n_words": 10
 }

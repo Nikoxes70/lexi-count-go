@@ -17,7 +17,8 @@ const (
 )
 
 type randomProxyClient interface {
-	NewHTTPClientWithRandomProxy() (*http.Client, error)
+	NewHTTPClientWithRandomProxy() (*http.Client, string, error)
+	MarkProxyAsBlocked(proxyURL string)
 }
 
 type Scraper struct {
@@ -83,7 +84,7 @@ func (s *Scraper) htmlDocument(url string, attempt int, lastError error) (*goque
 		return nil, fmt.Errorf("htmlDocument - client.Do - failed to init request")
 	}
 
-	client, err := s.client.NewHTTPClientWithRandomProxy()
+	client, proxyUrl, err := s.client.NewHTTPClientWithRandomProxy()
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +95,9 @@ func (s *Scraper) htmlDocument(url string, attempt int, lastError error) (*goque
 	}
 
 	if resp.StatusCode > 400 {
+		if resp.StatusCode == 999 {
+			s.client.MarkProxyAsBlocked(proxyUrl)
+		}
 		if resp.StatusCode == 404 {
 			return nil, fmt.Errorf("page not found - status code: %d", resp.StatusCode)
 		}

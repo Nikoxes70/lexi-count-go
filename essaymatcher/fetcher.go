@@ -7,10 +7,13 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
+var animationChars = []string{"|", "/", "-", "\\"}
+
 type matcherer interface {
-	ProcessEssay(url string, wordCounts map[string]int, mu *sync.Mutex) error
+	ProcessEssay(url string, wordCounts map[string]int) error
 }
 
 type wordCountPairer interface {
@@ -35,55 +38,94 @@ func (f *Fetcher) Start(essaysUrl string) (string, error) {
 	}
 
 	var wg sync.WaitGroup
-	wordCounts := make(map[string]int)
-	errs := make([]error, 0)
 	mu := &sync.Mutex{}
-	semaphore := make(chan struct{}, f.concurrencyLimit)
+	errs := make([]error, 0)
+	wordCounts := make(map[string]int)
 
-	totalURLs := len(urls)
-	var completed int
+	workCh := make(chan string, len(urls))
+	resultCh := make(chan map[string]int, f.concurrencyLimit)
+	errCh := make(chan error, f.concurrencyLimit)
+	progressCh := make(chan struct{}, len(urls))
 
-	for _, url := range urls {
+	for i := 0; i < f.concurrencyLimit; i++ {
 		wg.Add(1)
-		go func(url string) {
+		go func() {
 			defer wg.Done()
-
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-
-			// Temporary variable for storing word counts
-			localWordCounts := make(map[string]int)
-
-			// Process the essay and store results in localWordCounts
-			if err = f.matcher.ProcessEssay(url, localWordCounts, nil); err != nil {
-				mu.Lock()
-				errs = append(errs, err)
-				mu.Unlock()
+			for url := range workCh {
+				localWordCounts := make(map[string]int)
+				if err := f.matcher.ProcessEssay(url, localWordCounts); err != nil {
+					errCh <- err
+				} else {
+					resultCh <- localWordCounts
+				}
+				progressCh <- struct{}{}
 			}
-
-			// Safely update the shared wordCounts map
-			mu.Lock()
-			for word, count := range localWordCounts {
-				wordCounts[word] += count
-			}
-
-			completed++
-			percentComplete := (completed * 100) / totalURLs
-			fmt.Printf("\rProcessing essays: [%s%s] %d%% Complete",
-				strings.Repeat("=", percentComplete), strings.Repeat(" ", 100-percentComplete), percentComplete)
-
-			mu.Unlock()
-		}(url)
+		}()
 	}
+
+	go func() {
+		for _, url := range urls {
+			workCh <- url
+		}
+		close(workCh)
+	}()
+
+	go func() {
+		startTime := time.Now()
+
+		for i := 0; i < len(urls); i++ {
+			<-progressCh
+			mu.Lock()
+			percentComplete := (i + 1) * 100 / len(urls)
+			elapsedTime := time.Since(startTime).Round(time.Second)
+			animationChar := animationChars[i%len(animationChars)]
+			fmt.Printf("\rProcessing essays: [%s%s] %d%% Complete %s | Elapsed Time: %s",
+				strings.Repeat("=", percentComplete), strings.Repeat(" ", 100-percentComplete), percentComplete, animationChar, elapsedTime)
+			mu.Unlock()
+
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case words, ok := <-resultCh:
+				if !ok {
+					resultCh = nil
+				} else {
+					mu.Lock()
+					for word, count := range words {
+						wordCounts[word] += count
+					}
+					mu.Unlock()
+				}
+			case err, ok := <-errCh:
+				if !ok {
+					errCh = nil
+				} else {
+					mu.Lock()
+					errs = append(errs, err)
+					mu.Unlock()
+				}
+			}
+
+			if resultCh == nil && errCh == nil {
+				break
+			}
+		}
+		wg.Done()
+	}()
+
 	wg.Wait()
 
 	topWords := f.wcp.FindTopWords(wordCounts, f.topNWords)
 	var errStrings []string
-	for _, err := range errs {
-		if err != nil {
-			errStrings = append(errStrings, err.Error())
+	for _, e := range errs {
+		if e != nil {
+			errStrings = append(errStrings, e.Error())
 		}
 	}
+
 	response := struct {
 		Succeed []wordCountPair `json:"Succeed"`
 		Failed  []string        `json:"Failed"`
@@ -96,6 +138,7 @@ func (f *Fetcher) Start(essaysUrl string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return string(jsonOutput), nil
 }
 
@@ -120,5 +163,6 @@ func fetchURLs(url string) ([]string, error) {
 	if err = scanner.Err(); err != nil {
 		return nil, fmt.Errorf("error reading file: %v", err)
 	}
+	//lines = lines[:1000]
 	return lines, nil
 }
