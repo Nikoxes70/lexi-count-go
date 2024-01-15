@@ -29,21 +29,21 @@ Run LexiCount with the required flags for proxy_username and proxy_password for 
 
 Run LexiCount with the prefered flags for proxy_username, proxy_password and apiKey for [WEBSHARE](webshare.io).
 ```bash
-./cli --proxy_username="username" --proxy_password="password" --api_key="apiKey"
+./cli --proxy_username="username" --proxy_password="password" --proxy_api_key="apiKey"
 ```
 
 
 Optional flags can override other settings:
 ```bash
-./cli --proxy_username="username" --proxy_password="password" --threads=10 --top_n_words=20
+./cli --proxy_username="username" --proxy_password="password" --proxy_api_key="apiKey" --threads=10 --top_n_words=20
 ```
 
 #### Flags
 
 | Name           | Type   | Description                  |
 |----------------|--------|------------------------------|
-| proxy_username | string | webshare Proxy Username      |
-| proxy_password | string | webshare proxy service       |
+| proxy_username | string | webshare proxy Username      |
+| proxy_password | string | webshare proxy Password      |
 | proxy_api_key  | string | webshare Proxy Api Key       |
 | words_bank     | string | URL of the Words Bank        |
 | essays_url     | stirng | URL of the Essays            |
