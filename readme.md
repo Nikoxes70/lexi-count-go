@@ -1,6 +1,27 @@
 # LexiCount CLI Tool
 
-LexiCount is a command-line tool designed for processing and analyzing essays. It leverages proxies for network requests and analyzes text content to identify top words used in a collection of essays.
+## Overview
+This application, written in Go (Golang), is designed to fetch a list of essays from a provided source and analyze these essays to determine the top 10 most frequently occurring words. The application adheres to specific word validation rules and outputs the results in a well-structured, pretty-printed JSON format.
+
+### Features
+`Concurrency`: Utilizes Go's concurrency features for efficient processing.
+
+`Efficiency`: Optimized for quick retrieval and processing of data.
+
+`Rate Limiting`: Ensures controlled access to resources, preventing overloading.
+
+`Comprehensibility`: Code is clear, well-documented, and adheres to Go's coding standards.
+
+### Word Validation Rules
+`A word is considered valid if it:`
+
+Contains at least 3 characters.
+
+Contains only alphabetic characters.
+
+Is included in a predefined bank of words.
+
+## Getting Started
 
 ## Dependencies
 ### [Webshare.io](webshare.io) 
